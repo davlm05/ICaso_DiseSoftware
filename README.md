@@ -13,6 +13,21 @@ The DUA Streamliner is an intelligent system designed to automate the extraction
 ## 1.1 Technology stack: 
 ### Frontend technology, security, third-party libraries, frameworks, and hosting; all with their respective versions.
 
+- Aplication Type: Web App
+- Web Framework: Angular v21.0.0
+- TypeScript v5.9.3
+- NodeJS v22 
+- ESLint v9.5.0
+- Prettier v3.3.3
+- SonarCloud v5.0.1
+- Azure Application Insights SDK v3.3.1
+- Unit Testing: Jest 30.2.0
+- Integration Testing: Playwright v1.58.2
+- Cloud Service: Azure Cloud Service
+- Hosted By: Microsoft Azure – Azure App Service
+- Code Repositories: Azure DevOps
+- Environments: Deploymentes Azure DevOps
+
 ## 1.2 UX UI analysis: 
 ### Includes the desirable usability attributes of the application, a preliminary UX design in the form of wireframes, and evidence from UX testing with real users that validates the preliminary design.
 
