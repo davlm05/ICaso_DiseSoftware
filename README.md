@@ -34,7 +34,34 @@ The DUA Streamliner is an intelligent system designed to automate the extraction
 - Environment Deployments Tools: Azure DevOps Pipelines - Azure App Service Deploy task
 
 ## 1.2 UX UI analysis:
-### Includes the desirable usability attributes of the application, a preliminary UX design in the form of wireframes, and evidence from UX testing with real users that validates the preliminary design.
+### Core business process
+Describir paso a paso lo que sucede en cada pantalla en términos de acciones (no hablen de botones, ni listas ni de ningún componente visual, solo acciones de usuario y el resultado de cada acción)
+
+#### Login
+1. El usuario ingresa su login, password y el one time token
+2. Al intentar loguearse si falla, se le presenta un mensaje de user and pass invalido
+3. Si es succed ....
+
+#### Configurar el generador
+
+#### Monitoreo del avance
+
+#### Obtención del resultado / exportar
+
+#### Logout
+
+### Wireframes
+Con esos pasos anteriores le pido a una AI que me genere los screens y los pego aqui con un titulo, descripción y la imagen empotrada.
+
+Login screen
+The user can login into his account using the microsoft authentication screen
+![Login](/media/login.jpg)
+
+- Seleccionar el folder
+- Seleccionar la plantilla de DUA
+- Cómo monitoreo el avance del proceso
+- Cómo se ve el resultado final
+
 
 ## 1.3 Component design strategy:
 ### Defines the technique and principles for frontend component design, how component reusability is achieved, how styles are centralised, and how branding, internationalisation, and responsiveness are implemented.
