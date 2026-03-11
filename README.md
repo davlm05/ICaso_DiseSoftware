@@ -131,7 +131,30 @@ Create a low-fidelity desktop wireframe (1440x900) for the Logout flow of DUA St
 ![Wireframe 5](media/wireframe5.png)
 
 ## 1.3 Component design strategy:
-### Defines the technique and principles for frontend component design, how component reusability is achieved, how styles are centralised, and how branding, internationalisation, and responsiveness are implemented.
+
+### Strategy Name: Tailwind CSS (Utility-First Component Design Strategy)
+
+### Reutilisation by
+- **Utility-first CSS classes** that enable building reusable UI elements through composition of small, single-purpose classes (e.g., `flex`, `grid`, `p-4`, `text-sm`).
+- **Angular component abstraction**, where reusable UI components such as buttons, cards, form fields, and layouts encapsulate Tailwind class combinations.
+- **Shared component libraries** organised within a shared Angular module or folder structure (e.g., `/shared/components`) to promote reuse across the application.
+- **Design tokens defined in `tailwind.config.js`**, allowing centralised configuration of colours, typography, spacing, and breakpoints that can be reused consistently across components.
+- **`@apply` directive** in CSS to group commonly used Tailwind utility classes into reusable custom classes when needed.
+- **Atomic design methodology** (atoms, molecules, organisms) to structure reusable UI components and maintain scalability.
+
+### Internationalisation by
+- **Angular built-in internationalisation (i18n)** framework to manage translations and localisation.
+- **Translation files** (e.g., XLIFF or JSON) that store language resources for multiple locales.
+- **Angular pipes** such as `date`, `currency`, and `number` to handle locale-specific formatting.
+- **Language switching mechanisms** implemented through Angular services to dynamically change the application language.
+- Tailwind CSS does not provide native internationalisation features but integrates seamlessly with Angular’s i18n system.
+
+### Responsiveness by
+- **Mobile-first responsive design approach**, where base styles target mobile devices and progressively adapt to larger screens.
+- **Responsive utility modifiers** (`sm`, `md`, `lg`, `xl`, `2xl`) to apply styles at different viewport sizes.
+- **Flexible layout utilities** such as `flex`, `grid`, `gap`, and `container` to create adaptable layouts.
+- **Custom breakpoints defined in `tailwind.config.js`** to align with project-specific responsive requirements.
+- **Responsive spacing and typography utilities** to ensure visual consistency across multiple device types and screen sizes.
 
 ## 1.4 Security:
 ### Technologies, techniques, and classes - along with their respective locations in the project structure - responsible for authentication, authorisation, permissions, and session management.
