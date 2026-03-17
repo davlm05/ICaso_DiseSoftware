@@ -130,6 +130,23 @@ Create a low-fidelity desktop wireframe (1440x900) for the Logout flow of DUA St
 **Image:**  
 ![Wireframe 5](media/wireframe5.png)
 
+
+### UX test results:
+
+**Platform Used:** Maze | User Research and Testing Platform
+
+**Results:** 
+| Participant | Outcome | Duration | Responded at          |
+|-------------|---------|----------|-----------------------|
+| 510669335   | Success | 16.04s   | 12 Mar 2026, 11:53 am |
+| 510665402   | Success | 60.32s   | 12 Mar 2026, 11:46 am |
+| 510665363   | Success | 108.55s  | 12 Mar 2026, 11:43 am |
+
+**Heatmaps:** 
+
+![MazeLogIn](media/mazeLogIn.jpg)
+![MazeConfigurator](media/MazeConfigurator.jpg)
+
 ## 1.3 Component design strategy:
 
 ### Strategy Name: Tailwind CSS (Utility-First Component Design Strategy)
@@ -157,7 +174,75 @@ Create a low-fidelity desktop wireframe (1440x900) for the Logout flow of DUA St
 - **Responsive spacing and typography utilities** to ensure visual consistency across multiple device types and screen sizes.
 
 ## 1.4 Security:
-### Technologies, techniques, and classes - along with their respective locations in the project structure - responsible for authentication, authorisation, permissions, and session management.
+
+**Authentication**:
+- Provider: Azure Entra ID (formerly Azure Active Directory)
+- Authentication Type: Multi-Factor Authentication (MFA)
+- MFA Method: Mobile Authenticator Application only
+- Single Sign-On: Enabled through Azure Entra ID
+
+**Flow integration with frontend:**
+- During login, the user is redirected to Azure Entra ID.
+- Azure validates credentials and enforces MFA via mobile authenticator.
+- Upon successful authentication, a secure token (JWT) is issued.
+- The frontend consumes this token and establishes the user session.
+
+**Authorisation (Role-Based Access Control - RBAC)**
+Authorisation is managed through roles assigned via Azure Entra ID and interpreted within the application.
+
+**Roles:**
+- Manager
+- Customs Agent
+
+**Permissions by Role:**
+
+**Manager**
+- MANAGE_USERS → Manage user CRUD operations
+- VIEW_REPORTS → Access operational and performance reports
+- EDIT_TEMPLATES → Modify available DUA templates
+
+**Customs Agent**
+- LOAD_FILES → Upload and configure source document folders
+- GENERATE_DUA → Trigger AI-based DUA generation process
+- DOWNLOAD_DUA → Download generated DUA documents
+
+**Session Management**
+
+- Session is based on Azure-issued JWT tokens.
+- Tokens are securely stored in memory or browser storage (depending on implementation strategy).
+- Automatic session expiration is enforced based on token lifetime
+- Logout invalidates local session and triggers Azure logout.
+
+**Secure Configuration & Secrets Management**
+
+**Service Used:** Azure Key Vault
+
+**Purpose:**
+- Store environment variables
+- Store API keys
+- Store sensitive configuration data    
+
+Secrets are never hardcoded in the application. The backend retrieves them securely from Azure Key Vault at runtime.
+
+**Backend Identity Server**
+
+**Server Name**: 'customsidentityserver'
+
+This server acts as the secure bridge between Azure Entra ID and the application services, handling:
+
+- Token validation
+- Identity propagation
+- Secure communication with backend services
+
+**Additional Security Measures**
+
+- HTTPS enforced across all environments
+- Secure headers configured via Azure App Service
+- Input validation using Angular Reactive Forms + Zod
+- Audit logging for:
+  - Login attempts
+  - Logout events
+  - DUA generation and export actions
 
 ## 1.5 Layered design:
 ### Design and explanation of the different layers of the frontend application.
