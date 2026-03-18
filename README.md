@@ -87,7 +87,7 @@ Describe step by step what happens on each screen in terms of actions (do not me
 ```text
 Design a low-fidelity wireframe of a desktop web screen (1440x900) for DUA Streamliner. Monochromatic style, clean, without final branding. Show authentication flow with account identifier input, password, and OTP token, including validation of required fields, error state for invalid authentication, and successful state that redirects to Configure the generator. Wireframe only, not a realistic mockup.
 ```
-**Image:**  
+**Image:**
 ![Wireframe 1](media/wireframe1.png)
 
 #### Screen 2 - Configure the generator
@@ -97,7 +97,7 @@ Design a low-fidelity wireframe of a desktop web screen (1440x900) for DUA Strea
 ```text
 Create a low-fidelity desktop wireframe (1440x900) for the Configure the generator screen of DUA Streamliner. Show flow to enter folder path, validate access, detect and list compatible files (Excel, Word, PDF, and images), handle case with no valid files, select official DUA template, validate template integrity, and confirm configuration to start automated generation. Grayscale style, clear UX, wireframe only.
 ```
-**Image:**  
+**Image:**
 ![Wireframe 2](media/wireframe2.png)
 
 #### Screen 3 - Progress monitoring
@@ -107,7 +107,7 @@ Create a low-fidelity desktop wireframe (1440x900) for the Configure the generat
 ```text
 Generate a low-fidelity desktop wireframe (1440x900) for the Progress monitoring screen of DUA Streamliner. Include overall batch status, progress by stages (reading, OCR, semantic extraction, mapping, and validations), status per document, error log with causes, and observations due to low confidence, showing final states completed or completed with observations. Focus on traceability and process control. Wireframe only.
 ```
-**Image:**  
+**Image:**
 ![Wireframe 3](media/wireframe3.png)
 
 #### Screen 4 - Getting the result / export
@@ -117,7 +117,7 @@ Generate a low-fidelity desktop wireframe (1440x900) for the Progress monitoring
 ```text
 Design a low-fidelity desktop wireframe (1440x900) for the Getting the result / export screen of DUA Streamliner. Show the pre-filled DUA, fields marked by confidence level, review and correction flow for observations, final coherence validation, and action to export to Word (.docx), including export logging for auditing. Monochromatic style, clear, and task-oriented. Wireframe only.
 ```
-**Image:**  
+**Image:**
 ![Wireframe 4](media/wireframe4.png)
 
 #### Screen 5 - Logout
@@ -127,7 +127,7 @@ Design a low-fidelity desktop wireframe (1440x900) for the Getting the result / 
 ```text
 Create a low-fidelity desktop wireframe (1440x900) for the Logout flow of DUA Streamliner. Show logout confirmation, invalidation of active session, clearing of temporary tokens, audit log registry, and redirection to the authentication flow. Must communicate security and correct closure of the process. Wireframe only.
 ```
-**Image:**  
+**Image:**
 ![Wireframe 5](media/wireframe5.png)
 
 
@@ -135,14 +135,14 @@ Create a low-fidelity desktop wireframe (1440x900) for the Logout flow of DUA St
 
 **Platform Used:** Maze | User Research and Testing Platform
 
-**Results:** 
+**Results:**
 | Participant | Outcome | Duration | Responded at          |
 |-------------|---------|----------|-----------------------|
 | 510669335   | Success | 16.04s   | 12 Mar 2026, 11:53 am |
 | 510665402   | Success | 60.32s   | 12 Mar 2026, 11:46 am |
 | 510665363   | Success | 108.55s  | 12 Mar 2026, 11:43 am |
 
-**Heatmaps:** 
+**Heatmaps:**
 
 ![MazeLogIn](media/mazeLogIn.jpg)
 ![MazeConfigurator](media/MazeConfigurator.jpg)
@@ -157,7 +157,7 @@ Create a low-fidelity desktop wireframe (1440x900) for the Logout flow of DUA St
 - **Shared component libraries** organised within a shared Angular module or folder structure (e.g., `/shared/components`) to promote reuse across the application.
 - **Design tokens defined in `tailwind.config.js`**, allowing centralised configuration of colours, typography, spacing, and breakpoints that can be reused consistently across components.
 - **`@apply` directive** in CSS to group commonly used Tailwind utility classes into reusable custom classes when needed.
-- **Atomic design methodology** (atoms, molecules, organisms) to structure reusable UI components and maintain scalability.
+- **Feature modules with Smart/Dumb component pattern** to structure reusable UI components: Smart components manage data and state, Dumb components handle only presentation via `@Input()`/`@Output()`, promoting testability and reuse across features.
 
 ### Internationalisation by
 - **Angular built-in internationalisation (i18n)** framework to manage translations and localisation.
@@ -220,7 +220,7 @@ Authorisation is managed through roles assigned via Azure Entra ID and interpret
 **Purpose:**
 - Store environment variables
 - Store API keys
-- Store sensitive configuration data    
+- Store sensitive configuration data
 
 Secrets are never hardcoded in the application. The backend retrieves them securely from Azure Key Vault at runtime.
 
@@ -247,5 +247,126 @@ This server acts as the secure bridge between Azure Entra ID and the application
 ## 1.5 Layered design:
 ### Design and explanation of the different layers of the frontend application.
 
+The frontend is a **Single Page Application (SPA)** built with Angular 21, deployed on Azure App Service.
+
+**Why SPA over SSR or SSG:**
+- The application is entirely private, accessible only after authentication through Azure Entra ID with MFA. There is no public content that requires search engine indexing or SEO optimisation, which eliminates the primary advantage of Server-Side Rendering.
+- The core user workflows (real-time batch monitoring, DUA field editing with confidence indicators, inline corrections) demand continuous client-side interactivity. SPA handles this natively without requiring server round-trips for each UI update.
+- The application maintains complex client-side state (user session, batch progress by stage, DUA field values, confidence levels, user corrections). SPA manages this state naturally in memory, avoiding the hydration complexity that SSR introduces.
+- All users must complete the authentication flow before accessing any screen, so there is no benefit from SSR's faster first contentful paint for anonymous visitors.
+- SSR would add infrastructure complexity (a Node.js server process, hydration handling, workarounds for browser-only APIs like `localStorage`) without delivering measurable benefits for this use case.
+
+If there is no authenticated session, the **Authentication Layer** is invoked. This layer redirects the user to Azure Entra ID, handles the MFA flow via mobile authenticator, receives the JWT token upon success, and establishes the session. If authentication fails, the user remains on the login screen with an error notification. The Authentication Layer reads client IDs and tenant configuration from the **Settings Layer**.
+
+Once authenticated, the user accesses the visual interface rendered by the **Components Layer**. Components are organised by **feature modules with a Smart/Dumb component pattern**. Each feature module (`login`, `configure-generator`, `progress-monitoring`, `result-export`) encapsulates its own components, routes, and dependencies. Within each feature, **Smart components** (also called containers) manage data flow, call facades, and hold state subscriptions, while **Dumb components** (also called presentational) receive data exclusively via `@Input()` and emit user actions via `@Output()`, containing no logic beyond rendering. Shared presentational components (buttons, confidence indicators, form fields, progress bars) styled with Tailwind CSS reside in a common shared module and are reused across features.
+
+Within components, a **Facades Layer** exists to connect visual component actions with the **Services Layer**. Facades expose simplified methods that components call (e.g., `startGeneration()`, `exportDua()`), hiding the orchestration of multiple services behind a single entry point. Components never call services directly.
+
+The **Services Layer** contains the application's business operations: batch configuration, DUA generation orchestration, progress monitoring, coherence validation (totals, currency, dates), confidence level evaluation, and document export preparation. To perform their tasks, services may require access to the **Utils**, **ApiClients**, and **Settings** layers.
+
+The **ApiClients Layer** contains all classes that communicate with external APIs: the backend processing API for DUA generation, the file validation API, and the Azure Entra ID token refresh endpoint. ApiClients reads API base URLs and keys from the **Settings Layer**. The Settings Layer accesses environment variables configured in Azure Key Vault during application initialization.
+
+All ApiClient calls and returns use classes defined in the **Models Layer**, which represent DUA domain entities (`DuaDocument`, `DuaField`, `BatchJob`, `SourceFile`, `UserSession`) with their associated enumerations (`ConfidenceLevel`, `BatchStatus`, `ProcessingStage`, `FileType`, `UserRole`). All data entering and leaving ApiClients is validated by the **DataValidation Layer**, which uses Angular Reactive Forms Validators for user input and Zod schemas for API response validation, ensuring type safety at system boundaries.
+
+All layers can access the **Models**, **Utils**, and **State Management** layers. The State Management Layer (implemented with Angular Signals) maintains the global application state: current user session, active batch status, stage-by-stage progress, DUA field values with confidence levels, and user corrections. Any layer can read state, but only Services and Facades may write to it.
+
+The **NotificationService Layer** enables real-time communication between layers through an event-driven mechanism. Services subscribe to events such as `batchStageCompleted`, `lowConfidenceDetected`, `documentProcessingFailed`, and `exportReady`. The Progress Monitoring screen subscribes to batch progress events to update the UI in real time. Asynchronous API calls that involve long-running backend operations (DUA generation, OCR processing) are handled via polling with server-sent progress updates consumed through the NotificationService Layer.
+
+The **Logs Layer** provides classes to register system events: login attempts, logout events, DUA generation triggers, export actions, and validation failures. Log entries are structured with timestamp, user ID, action type, and result status, then sent to Azure Application Insights via ApiClients for auditing and traceability as defined in section 1.4.
+
+The **ExceptionHandling Layer** is a shared cross-cutting layer accessible by all other layers. It captures unhandled errors, HTTP failures (via Angular interceptors: `401` triggers session invalidation, `403` emits access denied, `5xx` triggers user alert), and domain validation errors. All caught exceptions are routed to the Logs Layer for registration and, when user-facing, to the NotificationService Layer to display error messages.
+
+The **Interceptors Layer** is a shared cross-cutting layer that processes all outgoing HTTP requests and incoming responses. `JwtInterceptor` attaches the Azure-issued Bearer token to every API call. `ErrorInterceptor` catches HTTP error responses and delegates them to the ExceptionHandling Layer. Interceptors operate transparently to all other layers.
+
+### Layer Access Rules
+
+| Layer | Can access |
+|-------|-----------|
+| Components | Facades |
+| Facades | Services, State Management |
+| Services | ApiClients, Utils, Settings, Models, State Management, NotificationService |
+| ApiClients | Settings, Models, DataValidation, Logs |
+| DataValidation | Models |
+| NotificationService | Models |
+| Logs | ApiClients |
+| ExceptionHandling | Logs, NotificationService |
+| Interceptors | ExceptionHandling, Settings |
+| Models, Utils, State Management | *(accessible by all layers)* |
+
+### Layered Architecture Diagram
+
+```
+        +------------------------+
+        |     User Browser       |
+        +-----------+------------+
+                    |
+                    v
+        +------------------------+
+        |   Azure App Service    |
+        |   Angular 21 SPA       |
+        +-----------+------------+
+                    |
+          Authentication Layer
+          (Azure Entra ID + MFA)
+                    |
+    +---------------+----------------+
+    |        Components Layer        |
+    |  Feature Modules               |
+    |  Smart (Container) Components  |
+    |  Dumb (Presentational) Comp.   |
+    +---------------+----------------+
+                    |
+              Facades Layer
+                    |
+              Services Layer
+                    |
+    +---------------+----------------+
+    |               |                |
+  Utils        ApiClients        Settings
+                    |                |
+                    |         Azure Key Vault
+                    |                |
+                    +----+-----------+
+                         |
+                   External APIs
+                  (Backend, Azure AD)
+
+  +-------------------------------------------------+
+  |          Cross-Cutting Layers                    |
+  |                                                 |
+  |  Models ---- DataValidation (Zod + Validators)  |
+  |                                                 |
+  |  State Management (Angular Signals)             |
+  |                                                 |
+  |  NotificationService (Event-Driven)             |
+  |                                                 |
+  |  Interceptors (JWT + Error Handling)            |
+  |                                                 |
+  |  ExceptionHandling ---- Logs (App Insights)     |
+  +-------------------------------------------------+
+```
+
 ## 1.6  Design patterns:
 ### Class design and their respective locations in the project structure where object-oriented design patterns are applied, such as: security, UI refresh, notification handling, state storage, API calls, asynchronous operations, session invalidation, event-driven programming, and object creation.
+
+**Object Creation — Factory Pattern:** Use `DocumentProcessorFactory` in the Services Layer to instantiate the correct processor based on file type. The factory receives a `FileType` enum (`XLSX`, `DOCX`, `PDF`, `IMAGE`) and returns the corresponding processor class (`ExcelProcessor`, `WordProcessor`, `PdfProcessor`, `ImageOcrProcessor`). This avoids conditional logic scattered across services and centralises object creation for all supported source document types.
+
+**Object Creation — Builder Pattern:** Use `DuaExportBuilder` in the Services Layer to construct the final DUA export request step by step: apply user corrections → run coherence validation (totals, currency, dates) → attach confidence metadata → generate audit trail entry → produce the `.docx` export payload. Each step is optional and chainable, allowing the export process to be assembled differently depending on whether the batch completed cleanly or with observations.
+
+**API Calls — Adapter Pattern:** Use `DuaDocumentAdapter` and `BatchJobAdapter` in the Infrastructure Layer (adapters folder) to transform raw API JSON responses into typed domain models. `DuaDocumentAdapter` maps the backend response into a `DuaDocument` with properly constructed `DuaField[]` objects and mapped `ConfidenceLevel` enums. `BatchJobAdapter` converts progress polling responses into `BatchJob` domain models with stage-by-stage breakdown. ApiClients never expose raw JSON to upper layers.
+
+**Notification Handling / Event-Driven — Observer Pattern:** `NotificationService` in the Cross-Cutting Layer uses RxJS `Subject` and `BehaviorSubject` to implement publish-subscribe. Services emit events (`batchStageCompleted`, `lowConfidenceDetected`, `documentProcessingFailed`, `exportReady`) and any layer can subscribe to receive them. The Progress Monitoring smart component subscribes to `batchProgress$` to update the UI in real time without polling the component tree.
+
+**UI Refresh — Observer Pattern:** Smart components subscribe to `Observable` and `Signal` streams exposed by Facades. When state changes (new batch progress, user corrects a DUA field, confidence level updates), the streams emit new values and Angular's change detection updates only the affected dumb components via `@Input()` bindings. No manual refresh or imperative DOM manipulation is needed.
+
+**Asynchronous Operations — Observer Pattern with RxJS Operators:** All HTTP calls return `Observable` streams managed with RxJS operators (`switchMap`, `catchError`, `retry`, `takeUntil`). Long-running operations like DUA generation use `interval` combined with `switchMap` to poll batch progress from the backend. When the user navigates away, `takeUntil` automatically unsubscribes to prevent memory leaks and orphaned requests.
+
+**State Storage — Singleton Pattern with Signals:** `StateManagement` service is registered with `providedIn: 'root'` ensuring a single instance across the entire application. It uses Angular Signals to hold `AuthState`, `BatchState`, and `DuaResultState`. Only Services and Facades write to state; components read reactively. This guarantees a single source of truth for the application state.
+
+**Singleton Pattern:** Applied to all services that must maintain a single shared instance: `ExceptionHandlingService`, `NotificationService`, `LogService`, all ApiClient classes (`DuaApiClient`, `FileApiClient`, `AuthApiClient`), `SettingsService`, and `StateManagement`. All are registered with Angular's `providedIn: 'root'` to guarantee one instance per application lifecycle.
+
+**Security / Session Invalidation — Chain of Responsibility Pattern:** HTTP Interceptors in the Infrastructure Layer form a chain that processes every outgoing request and incoming response sequentially. `JwtInterceptor` runs first and attaches the Azure Entra ID Bearer token to the request headers. `ErrorInterceptor` runs on the response and evaluates the status code: `401` triggers automatic session invalidation (clears tokens, redirects to login), `403` emits an access-denied event through `NotificationService`, and `5xx` logs the error and emits a user-facing alert. Each interceptor decides whether to handle the case or pass it to the next in the chain.
+
+**Security — Guard Pattern (Template Method):** `AuthGuard` and `RoleGuard` in the Application Layer implement Angular's `CanActivate` interface. `AuthGuard` checks for an active session token and redirects to login if expired. `RoleGuard` extends the logic by verifying that the user's role includes the required permission for the target route (e.g., only users with `GENERATE_DUA` permission can access `/generate`). Both follow the Template Method structure: validate precondition → allow or deny → redirect if denied.
+
+**Structural — Facade Pattern:** `DuaGenerationFacade`, `AuthFacade`, and `BatchMonitoringFacade` in the Application Layer provide simplified interfaces to complex subsystem interactions. `DuaGenerationFacade` exposes `startGeneration()` which internally orchestrates file validation, batch submission, progress subscription setup, and state initialisation. Smart components call one facade method instead of coordinating multiple services directly.
