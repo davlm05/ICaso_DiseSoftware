@@ -35,6 +35,19 @@ DUA Streamliner proposes an automated workflow where the user provides only a fo
 
 ## 1.2 UX UI analysis:
 
+### Usability attributes
+
+| Attribute | Target |
+|-----------|--------|
+| Learnability | First-time task completion without training — linear 4-screen workflow with one primary action per screen |
+| Efficiency | DUA generation initiated in ≤ 3 interactions: folder path → template select → confirm |
+| Error prevention | Inline validation before batch submission: path existence and template integrity verified before processing starts |
+| Visibility of system status | Live per-stage and per-document progress visible during the entire batch |
+| Confidence feedback | Green / Yellow / Red indicators on every DUA field communicate extraction certainty |
+| Consistency | Uniform design tokens (color, spacing, typography) across all 4 feature modules via `tailwind.config.js` |
+| Error recovery | Per-document retry without restarting the full batch; error log shows cause per document |
+| Accessibility | WCAG 2.1 AA — sufficient contrast, full keyboard navigation, ARIA labels on all interactive elements |
+
 ### Core business process
 Describe step by step what happens on each screen in terms of actions (do not mention buttons, lists, or any visual components; only user actions and the result of each action).
 
@@ -244,6 +257,19 @@ This server acts as the secure bridge between Azure Entra ID and the application
   - Logout events
   - DUA generation and export actions
 
+### Classes and project locations
+
+| Class | Path | Responsibility |
+|-------|------|----------------|
+| `AuthGuard` | `src/app/core/auth/auth.guard.ts` | Validates active JWT; redirects to login if expired |
+| `RoleGuard` | `src/app/core/auth/role.guard.ts` | Validates user role permission per route |
+| `AuthService` | `src/app/core/auth/auth.service.ts` | MSAL flow, token retrieval, session lifecycle |
+| `AuthState` | `src/app/core/state/auth.state.ts` | Stores token, role, and expiration via Angular Signals |
+| `AuthFacade` | `src/app/application/facades/auth.facade.ts` | Exposes `login()`, `logout()`, `getSession()` to components |
+| `JwtInterceptor` | `src/app/core/interceptors/jwt.interceptor.ts` | Attaches Bearer token to every outgoing HTTP request |
+| `ErrorInterceptor` | `src/app/core/interceptors/error.interceptor.ts` | 401 → session invalidation; 403 → access denied; 5xx → alert |
+| `AuthApiClient` | `src/app/infrastructure/api-clients/auth-api.client.ts` | Azure Entra ID token refresh endpoint |
+
 ## 1.5 Layered design:
 ### Design and explanation of the different layers of the frontend application.
 
@@ -349,24 +375,142 @@ The **Interceptors Layer** is a shared cross-cutting layer that processes all ou
 ## 1.6  Design patterns:
 ### Class design and their respective locations in the project structure where object-oriented design patterns are applied, such as: security, UI refresh, notification handling, state storage, API calls, asynchronous operations, session invalidation, event-driven programming, and object creation.
 
-**Object Creation — Factory Pattern:** Use `DocumentProcessorFactory` in the Services Layer to instantiate the correct processor based on file type. The factory receives a `FileType` enum (`XLSX`, `DOCX`, `PDF`, `IMAGE`) and returns the corresponding processor class (`ExcelProcessor`, `WordProcessor`, `PdfProcessor`, `ImageOcrProcessor`). This avoids conditional logic scattered across services and centralises object creation for all supported source document types.
+**Object Creation — Factory Pattern:** `DocumentProcessorFactory` (`src/app/core/services/document-processor.factory.ts`) receives a `FileType` enum (`XLSX`, `DOCX`, `PDF`, `IMAGE`) and returns the corresponding processor: `ExcelProcessor`, `WordProcessor`, `PdfProcessor`, `ImageOcrProcessor` (same folder). Centralises object creation and eliminates scattered conditional logic across services.
 
-**Object Creation — Builder Pattern:** Use `DuaExportBuilder` in the Services Layer to construct the final DUA export request step by step: apply user corrections → run coherence validation (totals, currency, dates) → attach confidence metadata → generate audit trail entry → produce the `.docx` export payload. Each step is optional and chainable, allowing the export process to be assembled differently depending on whether the batch completed cleanly or with observations.
+**Object Creation — Builder Pattern:** `DuaExportBuilder` (`src/app/core/services/dua-export.builder.ts`) constructs the final DUA export step by step: apply user corrections → coherence validation (totals, currency, dates) → attach confidence metadata → generate audit entry → produce `.docx` payload. Chainable steps adapt to clean or observation-flagged batches.
 
-**API Calls — Adapter Pattern:** Use `DuaDocumentAdapter` and `BatchJobAdapter` in the Infrastructure Layer (adapters folder) to transform raw API JSON responses into typed domain models. `DuaDocumentAdapter` maps the backend response into a `DuaDocument` with properly constructed `DuaField[]` objects and mapped `ConfidenceLevel` enums. `BatchJobAdapter` converts progress polling responses into `BatchJob` domain models with stage-by-stage breakdown. ApiClients never expose raw JSON to upper layers.
+**API Calls — Adapter Pattern:** `DuaDocumentAdapter` (`src/app/infrastructure/adapters/dua-document.adapter.ts`) maps raw backend responses into `DuaDocument` with `DuaField[]` and `ConfidenceLevel` enums. `BatchJobAdapter` (`src/app/infrastructure/adapters/batch-job.adapter.ts`) converts progress polling responses into `BatchJob` with stage-by-stage breakdown. ApiClients never expose raw JSON to upper layers.
 
-**Notification Handling / Event-Driven — Observer Pattern:** `NotificationService` in the Cross-Cutting Layer uses RxJS `Subject` and `BehaviorSubject` to implement publish-subscribe. Services emit events (`batchStageCompleted`, `lowConfidenceDetected`, `documentProcessingFailed`, `exportReady`) and any layer can subscribe to receive them. The Progress Monitoring smart component subscribes to `batchProgress$` to update the UI in real time without polling the component tree.
+**Notification Handling / Event-Driven — Observer Pattern:** `NotificationService` (`src/app/core/notifications/notification.service.ts`) uses RxJS `Subject` and `BehaviorSubject` to publish events (`batchStageCompleted`, `lowConfidenceDetected`, `documentProcessingFailed`, `exportReady`). Any layer subscribes to receive them. Progress Monitoring smart component subscribes to `batchProgress$` for real-time UI updates.
 
-**UI Refresh — Observer Pattern:** Smart components subscribe to `Observable` and `Signal` streams exposed by Facades. When state changes (new batch progress, user corrects a DUA field, confidence level updates), the streams emit new values and Angular's change detection updates only the affected dumb components via `@Input()` bindings. No manual refresh or imperative DOM manipulation is needed.
+**UI Refresh — Observer Pattern:** Smart components subscribe to `Observable` and `Signal` streams exposed by Facades. State changes propagate to Dumb components exclusively via `@Input()` bindings. Angular's change detection updates only affected components — no manual DOM manipulation.
 
-**Asynchronous Operations — Observer Pattern with RxJS Operators:** All HTTP calls return `Observable` streams managed with RxJS operators (`switchMap`, `catchError`, `retry`, `takeUntil`). Long-running operations like DUA generation use `interval` combined with `switchMap` to poll batch progress from the backend. When the user navigates away, `takeUntil` automatically unsubscribes to prevent memory leaks and orphaned requests.
+**Asynchronous Operations — Observer Pattern with RxJS Operators:** All HTTP calls return `Observable` streams managed with `switchMap`, `catchError`, `retry`, and `takeUntil`. DUA generation uses `interval` + `switchMap` to poll batch progress. `takeUntil` automatically unsubscribes on navigation to prevent memory leaks.
 
-**State Storage — Singleton Pattern with Signals:** `StateManagement` service is registered with `providedIn: 'root'` ensuring a single instance across the entire application. It uses Angular Signals to hold `AuthState`, `BatchState`, and `DuaResultState`. Only Services and Facades write to state; components read reactively. This guarantees a single source of truth for the application state.
+**State Storage — Singleton Pattern with Signals:** `StateManagementService` (`src/app/core/state/`) registered `providedIn: 'root'` uses Angular Signals to hold `AuthState` (`auth.state.ts`), `BatchState` (`batch.state.ts`), and `DuaResultState` (`dua-result.state.ts`). Only Services and Facades write; components read reactively.
 
-**Singleton Pattern:** Applied to all services that must maintain a single shared instance: `ExceptionHandlingService`, `NotificationService`, `LogService`, all ApiClient classes (`DuaApiClient`, `FileApiClient`, `AuthApiClient`), `SettingsService`, and `StateManagement`. All are registered with Angular's `providedIn: 'root'` to guarantee one instance per application lifecycle.
+**Singleton Pattern:** All services requiring a single shared instance are registered with `providedIn: 'root'`: `ExceptionHandlingService` (`src/app/core/exception-handling/exception-handling.service.ts`), `NotificationService` (`src/app/core/notifications/notification.service.ts`), `LogService` (`src/app/core/logging/log.service.ts`), `DuaApiClient` (`src/app/infrastructure/api-clients/dua-api.client.ts`), `FileApiClient` (`src/app/infrastructure/api-clients/file-api.client.ts`), `AuthApiClient` (`src/app/infrastructure/api-clients/auth-api.client.ts`), `SettingsService` (`src/app/core/settings/settings.service.ts`), `StateManagementService`.
 
-**Security / Session Invalidation — Chain of Responsibility Pattern:** HTTP Interceptors in the Infrastructure Layer form a chain that processes every outgoing request and incoming response sequentially. `JwtInterceptor` runs first and attaches the Azure Entra ID Bearer token to the request headers. `ErrorInterceptor` runs on the response and evaluates the status code: `401` triggers automatic session invalidation (clears tokens, redirects to login), `403` emits an access-denied event through `NotificationService`, and `5xx` logs the error and emits a user-facing alert. Each interceptor decides whether to handle the case or pass it to the next in the chain.
+**Security / Session Invalidation — Chain of Responsibility Pattern:** `JwtInterceptor` (`src/app/core/interceptors/jwt.interceptor.ts`) runs first to attach the Azure Entra ID Bearer token. `ErrorInterceptor` (`src/app/core/interceptors/error.interceptor.ts`) handles responses: `401` → session invalidation + redirect to login; `403` → access-denied event via `NotificationService`; `5xx` → log + user alert. Each interceptor passes unhandled cases down the chain.
 
-**Security — Guard Pattern (Template Method):** `AuthGuard` and `RoleGuard` in the Application Layer implement Angular's `CanActivate` interface. `AuthGuard` checks for an active session token and redirects to login if expired. `RoleGuard` extends the logic by verifying that the user's role includes the required permission for the target route (e.g., only users with `GENERATE_DUA` permission can access `/generate`). Both follow the Template Method structure: validate precondition → allow or deny → redirect if denied.
+**Security — Guard Pattern (Template Method):** `AuthGuard` (`src/app/core/auth/auth.guard.ts`) validates the active session token and redirects to login if expired. `RoleGuard` (`src/app/core/auth/role.guard.ts`) extends the check to verify the user's role holds the required permission for the target route (e.g., `GENERATE_DUA` for `/generate`). Template: validate precondition → allow or deny → redirect if denied.
 
-**Structural — Facade Pattern:** `DuaGenerationFacade`, `AuthFacade`, and `BatchMonitoringFacade` in the Application Layer provide simplified interfaces to complex subsystem interactions. `DuaGenerationFacade` exposes `startGeneration()` which internally orchestrates file validation, batch submission, progress subscription setup, and state initialisation. Smart components call one facade method instead of coordinating multiple services directly.
+**Structural — Facade Pattern:** `DuaGenerationFacade` (`src/app/application/facades/dua-generation.facade.ts`) exposes `startGeneration()`, which orchestrates file validation, batch submission, progress subscription setup, and state initialisation. `AuthFacade` (`src/app/application/facades/auth.facade.ts`) and `BatchMonitoringFacade` (`src/app/application/facades/batch-monitoring.facade.ts`) follow the same principle. Smart components call one facade method instead of coordinating multiple services.
+
+## 1.7 Project scaffold
+
+Scaffold location: [`/src`](/src)
+
+```
+src/
+├── main.ts
+├── index.html
+├── styles.css
+├── environments/
+│   ├── environment.ts
+│   ├── environment.staging.ts
+│   └── environment.prod.ts
+├── assets/
+│   └── i18n/
+│       ├── en.json
+│       └── es.json
+└── app/
+    ├── app.component.ts
+    ├── app.config.ts
+    ├── app.routes.ts
+    ├── core/
+    │   ├── auth/
+    │   │   ├── auth.guard.ts
+    │   │   ├── auth.service.ts
+    │   │   └── role.guard.ts
+    │   ├── data-validation/
+    │   │   ├── batch.schema.ts
+    │   │   └── dua.schema.ts
+    │   ├── exception-handling/
+    │   │   └── exception-handling.service.ts
+    │   ├── interceptors/
+    │   │   ├── error.interceptor.ts
+    │   │   └── jwt.interceptor.ts
+    │   ├── logging/
+    │   │   └── log.service.ts
+    │   ├── models/
+    │   │   ├── batch-job.model.ts
+    │   │   ├── batch-status.enum.ts
+    │   │   ├── confidence-level.enum.ts
+    │   │   ├── dua-document.model.ts
+    │   │   ├── dua-field.model.ts
+    │   │   ├── file-type.enum.ts
+    │   │   ├── processing-stage.enum.ts
+    │   │   ├── source-file.model.ts
+    │   │   ├── user-role.enum.ts
+    │   │   └── user-session.model.ts
+    │   ├── notifications/
+    │   │   └── notification.service.ts
+    │   ├── services/
+    │   │   ├── batch.service.ts
+    │   │   ├── coherence-validation.service.ts
+    │   │   ├── confidence-level.service.ts
+    │   │   ├── document-processor.factory.ts
+    │   │   ├── dua-export.builder.ts
+    │   │   ├── excel.processor.ts
+    │   │   ├── image-ocr.processor.ts
+    │   │   ├── pdf.processor.ts
+    │   │   └── word.processor.ts
+    │   ├── settings/
+    │   │   └── settings.service.ts
+    │   ├── state/
+    │   │   ├── auth.state.ts
+    │   │   ├── batch.state.ts
+    │   │   └── dua-result.state.ts
+    │   └── utils/
+    │       ├── currency.util.ts
+    │       └── date.util.ts
+    ├── application/
+    │   └── facades/
+    │       ├── auth.facade.ts
+    │       ├── batch-monitoring.facade.ts
+    │       └── dua-generation.facade.ts
+    ├── infrastructure/
+    │   ├── adapters/
+    │   │   ├── batch-job.adapter.ts
+    │   │   └── dua-document.adapter.ts
+    │   └── api-clients/
+    │       ├── auth-api.client.ts
+    │       ├── dua-api.client.ts
+    │       └── file-api.client.ts
+    ├── features/
+    │   ├── login/
+    │   │   └── components/
+    │   │       ├── login.component.ts
+    │   │       └── login-form.component.ts
+    │   ├── configure-generator/
+    │   │   └── components/
+    │   │       ├── configure-generator.component.ts
+    │   │       ├── file-list.component.ts
+    │   │       ├── folder-path-input.component.ts
+    │   │       └── template-selector.component.ts
+    │   ├── progress-monitoring/
+    │   │   └── components/
+    │   │       ├── document-status.component.ts
+    │   │       ├── error-log.component.ts
+    │   │       ├── progress-monitoring.component.ts
+    │   │       └── stage-progress.component.ts
+    │   └── result-export/
+    │       └── components/
+    │           ├── dua-preview.component.ts
+    │           ├── export-actions.component.ts
+    │           ├── field-editor.component.ts
+    │           └── result-export.component.ts
+    └── shared/
+        └── components/
+            ├── button/
+            │   └── button.component.ts
+            ├── confidence-indicator/
+            │   └── confidence-indicator.component.ts
+            ├── form-field/
+            │   └── form-field.component.ts
+            └── progress-bar/
+                └── progress-bar.component.ts
+```
+
+Root config files: `angular.json`, `tailwind.config.js`, `tsconfig.json`, `package.json`

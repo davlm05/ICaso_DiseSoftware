@@ -1,0 +1,7 @@
+export enum ProcessingStage {
+  READING = 'READING',
+  OCR = 'OCR',
+  SEMANTIC_EXTRACTION = 'SEMANTIC_EXTRACTION',
+  MAPPING = 'MAPPING',
+  VALIDATION = 'VALIDATION',
+}
