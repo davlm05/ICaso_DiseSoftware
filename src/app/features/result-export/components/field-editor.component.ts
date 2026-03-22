@@ -1,5 +1,5 @@
 import { Component, EventEmitter, Input, Output } from '@angular/core';
-import { DuaField } from '../../../../core/models/dua-field.model';
+import { DuaField } from '../../../core/models/dua-field.model';
 
 /** Dumb — renders an editable DUA field; emits correction on change. */
 @Component({ selector: 'app-field-editor', standalone: true, template: `` })

@@ -1,4 +1,5 @@
 import { Component } from '@angular/core';
+import { Router } from '@angular/router';
 import { LoginFormComponent } from './login-form.component';
 import { AuthFacade } from '../../../application/facades/auth.facade';
 
@@ -10,6 +11,8 @@ import { AuthFacade } from '../../../application/facades/auth.facade';
   template: `<app-login-form (submitted)="onSubmit($event)" />`,
 })
 export class LoginComponent {
-  constructor(private auth: AuthFacade) {}
-  onSubmit(_credentials: { identifier: string; password: string }): void {}
+  constructor(private auth: AuthFacade, private router: Router) {}
+  onSubmit(_credentials: { identifier: string; password: string }): void {
+    this.router.navigate(['/configure']);
+  }
 }
