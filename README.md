@@ -158,7 +158,7 @@ Create a low-fidelity desktop wireframe (1440x900) for the Logout flow of DUA St
 **Heatmaps:**
 
 ![MazeLogIn](media/mazeLogIn.jpg)
-![MazeConfigurator](media/MazeConfigurator.jpg)
+![MazeConfigurator](media/mazeConfigurator.jpg)
 
 ## 1.3 Component design strategy:
 
@@ -514,3 +514,251 @@ src/
 ```
 
 Root config files: `angular.json`, `tailwind.config.js`, `tsconfig.json`, `package.json`
+
+# 2. Backend Design
+
+## 2.1 Technology Stack
+
+| Concern | Choice |
+|---|---|
+| API Style | REST over HTTPS |
+| API Standard | OpenAPI 3.1 (Swagger) |
+| Runtime | .NET 8 / ASP.NET Core |
+| Gateway | Azure API Management (APIM) |
+| Hosting | Azure App Service (B3 plan, Linux containers) |
+| Async & Push Notifications | Azure Notification Hubs |
+| Document Processing (OCR) | Azure AI Document Intelligence (Form Recognizer) |
+| AI / Semantic Extraction | Azure OpenAI Service (GPT-4o) |
+| File Storage | Azure Blob Storage (per-job containers) |
+| Background Jobs | Azure Service Bus + .NET Worker Service (hosted in App Service) |
+| Load Balancing | Not required — single App Service instance |
+| Repo Layout | Monorepo — backend code lives under `/duabusiness` |
+| Service Granularity | Services (not microservices) — single deployable ASP.NET Core app with internal service classes |
+
+**Internal service modules (within the monolith):**
+
+```
+duabusiness/
+├── DUA.Api/                  # Controllers, middleware, program.cs
+├── DUA.Application/          # Use cases, service interfaces
+├── DUA.Domain/               # Entities, value objects, domain events
+├── DUA.Infrastructure/       # Azure SDK adapters, EF Core, repositories
+└── DUA.Workers/              # Background worker (Service Bus consumer)
+```
+
+**OpenAPI contract:** Auto-generated via `Swashbuckle.AspNetCore`. The `/swagger/v1/swagger.json` endpoint is published to APIM on every deployment.
+
+---
+
+## 2.2 Security
+
+### Transport
+- **HTTPS enforced** at APIM level. HTTP requests are rejected with `301 → HTTPS`.
+- TLS 1.2 minimum; TLS 1.3 preferred. Enforced via APIM policy `<choose-backend-scheme>`.
+
+### Authentication & Authorization
+- **OAuth 2.0 + OIDC** via **Azure Entra ID (Azure AD B2C)** for end users.
+- JWT Bearer tokens validated in ASP.NET Core middleware (`AddJwtBearer`).
+- Token expiry: **60 minutes** access token / **7 days** refresh token.
+- Role claims: `agent` (standard user), `admin`.
+
+### Database Encryption
+- **Azure SQL Database** with **Transparent Data Encryption (TDE)** using customer-managed keys (CMK) stored in **Azure Key Vault**.
+- Column-level encryption for PII fields (`importerTaxId`, `exporterTaxId`) using **Always Encrypted** with `AES-256`.
+- Secrets (connection strings, API keys) stored exclusively in **Azure Key Vault**; accessed via **Managed Identity** — no secrets in code or config files.
+
+### Payload Size Limits
+| Endpoint Group | Max Payload |
+|---|---|
+| `POST /jobs` (folder upload trigger) | 50 MB |
+| `POST /jobs/{id}/files` (individual file upload) | 20 MB per file |
+| All other endpoints | 1 MB |
+
+Enforced via `IFormFile` size filters in ASP.NET Core + APIM `<quota-by-key>` policy.
+
+### Rate Limiting
+| Scope | Limit |
+|---|---|
+| Per authenticated user | 60 requests / minute |
+| Per IP (unauthenticated) | 10 requests / minute |
+| Concurrent connections (App Service) | 200 max (App Service B3 ceiling) |
+| File upload endpoint (`POST /jobs/{id}/files`) | 10 requests / minute / user |
+
+Implemented via APIM rate-limit policies + ASP.NET Core `RateLimiter` middleware (token bucket algorithm) as a secondary layer.
+
+### Data Retention
+| Tier | Duration | Action |
+|---|---|---|
+| **Production (hot)** | 90 days | Active in Azure SQL + Blob Storage |
+| **Archive (cool)** | 12 months | Moved to Azure Blob Storage (Cool tier) + Azure SQL Archive |
+| **Deletion** | After 15 months | Hard-deleted; audit log entry written |
+
+Retention job runs nightly via a Worker Service triggered by an Azure Service Bus scheduled message.
+
+---
+
+## 2.3 Observability
+
+### Instrumentation Platform
+- **Azure Application Insights** — primary telemetry sink (traces, exceptions, dependencies, custom events).
+- **OpenTelemetry SDK** (`OpenTelemetry.Extensions.Hosting`) used in-process; OTLP exporter targets Application Insights.
+- Structured logging via **Serilog** → Application Insights sink + Azure Log Analytics Workspace.
+
+### Dashboard & Alerting
+- **Azure Monitor Workbooks** for operational dashboards.
+- **Grafana (Azure Managed Grafana)** for developer-facing analysis dashboards, sourcing data from Log Analytics.
+- Alerts configured in Azure Monitor for all `P1`/`P2` events (PagerDuty integration via webhook).
+
+### Registered Events
+
+| Event Name | Trigger | Level |
+|---|---|---|
+| `job.created` | New DUA job submitted | INFO |
+| `job.file_uploaded` | File added to a job | INFO |
+| `job.processing_started` | Worker picks up job | INFO |
+| `job.ocr_completed` | Document Intelligence step done | INFO |
+| `job.extraction_completed` | AI semantic extraction done | INFO |
+| `job.mapping_completed` | DUA fields mapped | INFO |
+| `job.dua_generated` | Final .docx produced | INFO |
+| `job.failed` | Any unrecoverable error in pipeline | ERROR |
+| `job.field_low_confidence` | Field confidence < 0.6 | WARN |
+| `auth.login_success` | User authenticated | INFO |
+| `auth.login_failure` | Invalid credentials / token | WARN |
+| `auth.token_refresh` | Token refreshed | DEBUG |
+| `security.rate_limit_hit` | Rate limit exceeded | WARN |
+| `security.oversized_payload` | Payload rejected | WARN |
+| `data.retention_archive` | Records moved to archive | INFO |
+| `data.retention_deletion` | Records hard-deleted | INFO |
+| `api.unhandled_exception` | 500-level error | ERROR |
+| `api.validation_error` | 400 from input validation | WARN |
+
+All events carry: `correlationId`, `userId`, `jobId` (when applicable), `timestamp`, `durationMs`.
+
+---
+
+## 2.4 Infrastructure & DevOps
+
+### Source Control
+- GitHub (monorepo). Branch strategy: **GitHub Flow** (`main` → protected, feature branches via PR).
+
+### CI/CD Tooling
+- **GitHub Actions** — all pipeline automation lives in `.github/workflows/`.
+
+```
+.github/workflows/
+├── ci.yml          # Build, lint, unit tests — triggers on every PR
+├── cd-dev.yml      # Deploy to Dev on merge to main
+├── cd-stage.yml    # Deploy to Stage on manual approval
+└── cd-prod.yml     # Deploy to Prod on manual approval + tag
+```
+
+### Environment Deployment Matrix
+
+| Environment | Hosting | IaC Tool | Trigger |
+|---|---|---|---|
+| **Dev** | Azure App Service (shared) | **Bicep** (ARM templates) | Auto on merge to `main` |
+| **Stage** | Azure App Service (dedicated slot) | **Bicep** | Manual approval in GitHub Actions |
+| **Prod** | Azure App Service (dedicated) | **Terraform** (state in Azure Storage) | Manual approval + semantic version tag (`v*.*.*`) |
+
+### IaC Layout
+```
+infrastructure/
+├── bicep/
+│   ├── dev/
+│   └── stage/
+└── terraform/
+    └── prod/
+```
+
+### Pipeline Steps (CI)
+1. `dotnet restore`
+2. `dotnet build --no-restore`
+3. `dotnet test` (unit + integration, with coverage gate ≥ 80%)
+4. `dotnet publish` → Docker image build
+5. Push image to **Azure Container Registry (ACR)**
+6. OpenAPI contract diff check (breaks PR if breaking changes detected)
+
+### Pipeline Steps (CD)
+1. Pull image from ACR
+2. Apply Bicep/Terraform plan
+3. Deploy to App Service slot (`--slot staging`)
+4. Run smoke tests against slot
+5. Swap slot to production (zero-downtime)
+6. Post-deploy notification to Slack channel
+
+---
+
+## 2.5 Availability
+
+| Metric | Target |
+|---|---|
+| **Annual uptime SLA** | **99.5%** |
+| Max downtime (annual) | **≈ 43.8 hours/year** |
+| Planned maintenance window | Sundays 02:00–04:00 UTC (excluded from SLA calc) |
+| RTO (Recovery Time Objective) | 2 hours |
+| RPO (Recovery Point Objective) | 1 hour |
+
+**Mechanisms supporting this target:**
+- Azure App Service built-in health checks with auto-restart on unhealthy instances.
+- Azure SQL Database geo-redundant backup (automated, every 12 h full / 5 min transaction log).
+- Blob Storage with **ZRS (Zone-Redundant Storage)** replication.
+- APIM with built-in retry policies for transient backend failures.
+- Worker Service dead-letter queue on Service Bus (messages retried up to 3× before DLQ).
+
+> Note: 99.5% is deliberately chosen over 99.9% to avoid over-engineering a single-instance App Service setup. Upgrade path to 99.9% requires moving to Azure App Service **Premium** with auto-scale + **Azure Front Door**.
+
+---
+
+## 2.6 Scalability
+
+The following architectural elements scale horizontally or vertically in response to increased requests per minute (RPM):
+
+| Component | Scaling Mechanism | Trigger Metric |
+|---|---|---|
+| **Azure API Management** | Built-in horizontal scale (unit-based) | Sustained throughput > 80% of current unit capacity |
+| **Azure App Service** | **Scale-out** (add instances) via App Service autoscale rules | CPU > 70% for 5 min OR HTTP queue length > 50 |
+| **Azure Service Bus** (job queue) | Partitioned topics (16 partitions); Premium tier for higher throughput | Queue depth > 500 messages |
+| **DUA.Workers** (background processor) | Scale out App Service worker instances independently (separate App Service Plan) | Service Bus queue depth |
+| **Azure Blob Storage** | Inherently elastic — no action required | N/A |
+| **Azure SQL Database** | **Scale up** DTUs/vCores; read replicas for reporting queries | DTU% > 80% sustained |
+| **Azure OpenAI** (GPT-4o) | Increase TPM quota via Azure portal; implement request queuing | Token rate limit errors (429) |
+| **Azure AI Document Intelligence** | Increase transactions-per-second quota | Throttling errors (429) |
+| **Azure Application Insights** | Elastic SaaS — no action required | N/A |
+
+**Scaling Boundary (current design):**
+- Designed for **≤ 500 RPM** on a single App Service B3 instance.
+- At **500–2,000 RPM**: enable App Service autoscale (2–5 instances) + APIM Standard tier.
+- Above **2,000 RPM**: re-evaluate service decomposition (split document processing into a dedicated service) and introduce Azure Front Door for global load distribution.
+
+## 2.7 Backend key workflows:
+- esto lo pueden ir trabajando 
+
+### Upload files to generate dua
+1. The backend receive the list of files to be uploaded 
+2. Open a streaming transfer file by file to received the files content in raw format
+3. All the files are store in azure cloud storage and map in the database ....
+
+... poniendo los pasos de los flujos
+
+### Setup dua template
+1.
+2. 
+3. 
+
+## 2.8 Architecture diagrams in layers:
+- Follow the C4 estandard to create the diagrams and explanations
+- Check Week #6 #7 for the details 
+- In this case we're not going to make the components diagram, only context, container and code. 
+
+## 2.9 Design Considerations:
+
+- Follow the C4 estandard to create the diagrams and explanations
+- Check Week #6 #7 for the details 
+- In this case we're not going to make the components diagram, only context, container and code. 
+
+## Source Code
+
+* Use a specialized agent to generate the project's backend skeleton based on this technical description.
+* Ensure the agent focuses strictly on generating scripts, folder structures, or class definitions without implementing functional logic.
+* The directory structure of the backend code must align with the chosen repository architecture.
+* Provide direct links to key folders and primary classes within the relevant sections of this README.md file.
