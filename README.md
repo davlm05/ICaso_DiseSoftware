@@ -752,9 +752,11 @@ The following architectural elements scale horizontally or vertically in respons
 
 ## 2.9 Design Considerations:
 
-- Follow the C4 estandard to create the diagrams and explanations
-- Check Week #6 #7 for the details 
-- In this case we're not going to make the components diagram, only context, container and code. 
+* System configurations, parameters, and policies must be fully documented and maintained within the source code.
+* Resource allocations, including memory, server specifications, load balancing settings, and networking parameters.
+* Selection of specific algorithms and their respective parameters to be applied within core business logic.
+* Development and definition of agent prototypes.
+* Definition of interfaces, proxies, and integration points with external systems or architectural components.
 
 ## Source Code
 
