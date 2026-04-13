@@ -44,7 +44,7 @@ DUA Streamliner proposes an automated workflow where the user provides only a fo
 | Error prevention | Inline validation before batch submission: path existence and template integrity verified before processing starts |
 | Visibility of system status | Live per-stage and per-document progress visible during the entire batch |
 | Confidence feedback | Green / Yellow / Red indicators on every DUA field communicate extraction certainty |
-| Consistency | Uniform design tokens (color, spacing, typography) across all 4 feature modules via [`tailwind.config.js`](tailwind.config.js) |
+| Consistency | Uniform design tokens (color, spacing, typography) across all 4 feature modules via [`tailwind.config.js`](frontend/tailwind.config.js) |
 | Error recovery | Per-document retry without restarting the full batch; error log shows cause per document |
 | Accessibility | WCAG 2.1 AA — sufficient contrast, full keyboard navigation, ARIA labels on all interactive elements |
 
@@ -168,7 +168,7 @@ Create a low-fidelity desktop wireframe (1440x900) for the Logout flow of DUA St
 - **Utility-first CSS classes** that enable building reusable UI elements through composition of small, single-purpose classes (e.g., `flex`, `grid`, `p-4`, `text-sm`).
 - **Angular component abstraction**, where reusable UI components such as buttons, cards, form fields, and layouts encapsulate Tailwind class combinations.
 - **Shared component libraries** organised within a shared Angular module or folder structure (e.g., `/shared/components`) to promote reuse across the application.
-- **Design tokens defined in [`tailwind.config.js`](tailwind.config.js)**, allowing centralised configuration of colours, typography, spacing, and breakpoints that can be reused consistently across components.
+- **Design tokens defined in [`tailwind.config.js`](frontend/tailwind.config.js)**, allowing centralised configuration of colours, typography, spacing, and breakpoints that can be reused consistently across components.
 - **`@apply` directive** in CSS to group commonly used Tailwind utility classes into reusable custom classes when needed.
 - **Feature modules with Smart/Dumb component pattern** to structure reusable UI components: Smart components manage data and state, Dumb components handle only presentation via `@Input()`/`@Output()`, promoting testability and reuse across features.
 
@@ -183,7 +183,7 @@ Create a low-fidelity desktop wireframe (1440x900) for the Logout flow of DUA St
 - **Mobile-first responsive design approach**, where base styles target mobile devices and progressively adapt to larger screens.
 - **Responsive utility modifiers** (`sm`, `md`, `lg`, `xl`, `2xl`) to apply styles at different viewport sizes.
 - **Flexible layout utilities** such as `flex`, `grid`, `gap`, and `container` to create adaptable layouts.
-- **Custom breakpoints defined in [`tailwind.config.js`](tailwind.config.js)** to align with project-specific responsive requirements.
+- **Custom breakpoints defined in [`tailwind.config.js`](frontend/tailwind.config.js)** to align with project-specific responsive requirements.
 - **Responsive spacing and typography utilities** to ensure visual consistency across multiple device types and screen sizes.
 
 ## 1.4 Security:
@@ -261,14 +261,14 @@ This server acts as the secure bridge between Azure Entra ID and the application
 
 | Class | Path | Responsibility |
 |-------|------|----------------|
-| `AuthGuard` | [`src/app/core/auth/auth.guard.ts`](src/app/core/auth/auth.guard.ts) | Validates active JWT; redirects to login if expired |
-| `RoleGuard` | [`src/app/core/auth/role.guard.ts`](src/app/core/auth/role.guard.ts) | Validates user role permission per route |
-| `AuthService` | [`src/app/core/auth/auth.service.ts`](src/app/core/auth/auth.service.ts) | MSAL flow, token retrieval, session lifecycle |
-| `AuthState` | [`src/app/core/state/auth.state.ts`](src/app/core/state/auth.state.ts) | Stores token, role, and expiration via Angular Signals |
-| `AuthFacade` | [`src/app/application/facades/auth.facade.ts`](src/app/application/facades/auth.facade.ts) | Exposes `login()`, `logout()`, `getSession()` to components |
-| `JwtInterceptor` | [`src/app/core/interceptors/jwt.interceptor.ts`](src/app/core/interceptors/jwt.interceptor.ts) | Attaches Bearer token to every outgoing HTTP request |
-| `ErrorInterceptor` | [`src/app/core/interceptors/error.interceptor.ts`](src/app/core/interceptors/error.interceptor.ts) | 401 → session invalidation; 403 → access denied; 5xx → alert |
-| `AuthApiClient` | [`src/app/infrastructure/api-clients/auth-api.client.ts`](src/app/infrastructure/api-clients/auth-api.client.ts) | Azure Entra ID token refresh endpoint |
+| `AuthGuard` | [`src/app/core/auth/auth.guard.ts`](frontend/src/app/core/auth/auth.guard.ts) | Validates active JWT; redirects to login if expired |
+| `RoleGuard` | [`src/app/core/auth/role.guard.ts`](frontend/src/app/core/auth/role.guard.ts) | Validates user role permission per route |
+| `AuthService` | [`src/app/core/auth/auth.service.ts`](frontend/src/app/core/auth/auth.service.ts) | MSAL flow, token retrieval, session lifecycle |
+| `AuthState` | [`src/app/core/state/auth.state.ts`](frontend/src/app/core/state/auth.state.ts) | Stores token, role, and expiration via Angular Signals |
+| `AuthFacade` | [`src/app/application/facades/auth.facade.ts`](frontend/src/app/application/facades/auth.facade.ts) | Exposes `login()`, `logout()`, `getSession()` to components |
+| `JwtInterceptor` | [`src/app/core/interceptors/jwt.interceptor.ts`](frontend/src/app/core/interceptors/jwt.interceptor.ts) | Attaches Bearer token to every outgoing HTTP request |
+| `ErrorInterceptor` | [`src/app/core/interceptors/error.interceptor.ts`](frontend/src/app/core/interceptors/error.interceptor.ts) | 401 → session invalidation; 403 → access denied; 5xx → alert |
+| `AuthApiClient` | [`src/app/infrastructure/api-clients/auth-api.client.ts`](frontend/src/app/infrastructure/api-clients/auth-api.client.ts) | Azure Entra ID token refresh endpoint |
 
 ## 1.5 Layered design:
 ### Design and explanation of the different layers of the frontend application.
@@ -375,34 +375,34 @@ The **Interceptors Layer** is a shared cross-cutting layer that processes all ou
 ## 1.6  Design patterns:
 ### Class design and their respective locations in the project structure where object-oriented design patterns are applied, such as: security, UI refresh, notification handling, state storage, API calls, asynchronous operations, session invalidation, event-driven programming, and object creation.
 
-**Object Creation — Factory Pattern:** `DocumentProcessorFactory` ([`src/app/core/services/document-processor.factory.ts`](src/app/core/services/document-processor.factory.ts)) receives a `FileType` enum (`XLSX`, `DOCX`, `PDF`, `IMAGE`) and returns the corresponding processor: `ExcelProcessor`, `WordProcessor`, `PdfProcessor`, `ImageOcrProcessor` (same folder). Centralises object creation and eliminates scattered conditional logic across services.
+**Object Creation — Factory Pattern:** `DocumentProcessorFactory` ([`src/app/core/services/document-processor.factory.ts`](frontend/src/app/core/services/document-processor.factory.ts)) receives a `FileType` enum (`XLSX`, `DOCX`, `PDF`, `IMAGE`) and returns the corresponding processor: `ExcelProcessor`, `WordProcessor`, `PdfProcessor`, `ImageOcrProcessor` (same folder). Centralises object creation and eliminates scattered conditional logic across services.
 
-**Object Creation — Builder Pattern:** `DuaExportBuilder` ([`src/app/core/services/dua-export.builder.ts`](src/app/core/services/dua-export.builder.ts)) constructs the final DUA export step by step: apply user corrections → coherence validation (totals, currency, dates) → attach confidence metadata → generate audit entry → produce `.docx` payload. Chainable steps adapt to clean or observation-flagged batches.
+**Object Creation — Builder Pattern:** `DuaExportBuilder` ([`src/app/core/services/dua-export.builder.ts`](frontend/src/app/core/services/dua-export.builder.ts)) constructs the final DUA export step by step: apply user corrections → coherence validation (totals, currency, dates) → attach confidence metadata → generate audit entry → produce `.docx` payload. Chainable steps adapt to clean or observation-flagged batches.
 
-**API Calls — Adapter Pattern:** `DuaDocumentAdapter` ([`src/app/infrastructure/adapters/dua-document.adapter.ts`](src/app/infrastructure/adapters/dua-document.adapter.ts)) maps raw backend responses into `DuaDocument` with `DuaField[]` and `ConfidenceLevel` enums. `BatchJobAdapter` ([`src/app/infrastructure/adapters/batch-job.adapter.ts`](src/app/infrastructure/adapters/batch-job.adapter.ts)) converts progress polling responses into `BatchJob` with stage-by-stage breakdown. ApiClients never expose raw JSON to upper layers.
+**API Calls — Adapter Pattern:** `DuaDocumentAdapter` ([`src/app/infrastructure/adapters/dua-document.adapter.ts`](frontend/src/app/infrastructure/adapters/dua-document.adapter.ts)) maps raw backend responses into `DuaDocument` with `DuaField[]` and `ConfidenceLevel` enums. `BatchJobAdapter` ([`src/app/infrastructure/adapters/batch-job.adapter.ts`](frontend/src/app/infrastructure/adapters/batch-job.adapter.ts)) converts progress polling responses into `BatchJob` with stage-by-stage breakdown. ApiClients never expose raw JSON to upper layers.
 
-**Notification Handling / Event-Driven — Observer Pattern:** `NotificationService` ([`src/app/core/notifications/notification.service.ts`](src/app/core/notifications/notification.service.ts)) uses RxJS `Subject` and `BehaviorSubject` to publish events (`batchStageCompleted`, `lowConfidenceDetected`, `documentProcessingFailed`, `exportReady`). Any layer subscribes to receive them. Progress Monitoring smart component subscribes to `batchProgress$` for real-time UI updates.
+**Notification Handling / Event-Driven — Observer Pattern:** `NotificationService` ([`src/app/core/notifications/notification.service.ts`](frontend/src/app/core/notifications/notification.service.ts)) uses RxJS `Subject` and `BehaviorSubject` to publish events (`batchStageCompleted`, `lowConfidenceDetected`, `documentProcessingFailed`, `exportReady`). Any layer subscribes to receive them. Progress Monitoring smart component subscribes to `batchProgress$` for real-time UI updates.
 
 **UI Refresh — Observer Pattern:** Smart components subscribe to `Observable` and `Signal` streams exposed by Facades. State changes propagate to Dumb components exclusively via `@Input()` bindings. Angular's change detection updates only affected components — no manual DOM manipulation.
 
 **Asynchronous Operations — Observer Pattern with RxJS Operators:** All HTTP calls return `Observable` streams managed with `switchMap`, `catchError`, `retry`, and `takeUntil`. DUA generation uses `interval` + `switchMap` to poll batch progress. `takeUntil` automatically unsubscribes on navigation to prevent memory leaks.
 
-**State Storage — Singleton Pattern with Signals:** `StateManagementService` ([`src/app/core/state/`](src/app/core/state)) registered `providedIn: 'root'` uses Angular Signals to hold `AuthState` ([`auth.state.ts`](src/app/core/state/auth.state.ts)), `BatchState` ([`batch.state.ts`](src/app/core/state/batch.state.ts)), and `DuaResultState` ([`dua-result.state.ts`](src/app/core/state/dua-result.state.ts)). Only Services and Facades write; components read reactively.
+**State Storage — Singleton Pattern with Signals:** `StateManagementService` ([`src/app/core/state/`](frontend/src/app/core/state)) registered `providedIn: 'root'` uses Angular Signals to hold `AuthState` ([`auth.state.ts`](frontend/src/app/core/state/auth.state.ts)), `BatchState` ([`batch.state.ts`](frontend/src/app/core/state/batch.state.ts)), and `DuaResultState` ([`dua-result.state.ts`](frontend/src/app/core/state/dua-result.state.ts)). Only Services and Facades write; components read reactively.
 
-**Singleton Pattern:** All services requiring a single shared instance are registered with `providedIn: 'root'`: `ExceptionHandlingService` ([`src/app/core/exception-handling/exception-handling.service.ts`](src/app/core/exception-handling/exception-handling.service.ts)), `NotificationService` ([`src/app/core/notifications/notification.service.ts`](src/app/core/notifications/notification.service.ts)), `LogService` ([`src/app/core/logging/log.service.ts`](src/app/core/logging/log.service.ts)), `DuaApiClient` ([`src/app/infrastructure/api-clients/dua-api.client.ts`](src/app/infrastructure/api-clients/dua-api.client.ts)), `FileApiClient` ([`src/app/infrastructure/api-clients/file-api.client.ts`](src/app/infrastructure/api-clients/file-api.client.ts)), `AuthApiClient` ([`src/app/infrastructure/api-clients/auth-api.client.ts`](src/app/infrastructure/api-clients/auth-api.client.ts)), `SettingsService` ([`src/app/core/settings/settings.service.ts`](src/app/core/settings/settings.service.ts)), `StateManagementService`.
+**Singleton Pattern:** All services requiring a single shared instance are registered with `providedIn: 'root'`: `ExceptionHandlingService` ([`src/app/core/exception-handling/exception-handling.service.ts`](frontend/src/app/core/exception-handling/exception-handling.service.ts)), `NotificationService` ([`src/app/core/notifications/notification.service.ts`](frontend/src/app/core/notifications/notification.service.ts)), `LogService` ([`src/app/core/logging/log.service.ts`](frontend/src/app/core/logging/log.service.ts)), `DuaApiClient` ([`src/app/infrastructure/api-clients/dua-api.client.ts`](frontend/src/app/infrastructure/api-clients/dua-api.client.ts)), `FileApiClient` ([`src/app/infrastructure/api-clients/file-api.client.ts`](frontend/src/app/infrastructure/api-clients/file-api.client.ts)), `AuthApiClient` ([`src/app/infrastructure/api-clients/auth-api.client.ts`](frontend/src/app/infrastructure/api-clients/auth-api.client.ts)), `SettingsService` ([`src/app/core/settings/settings.service.ts`](frontend/src/app/core/settings/settings.service.ts)), `StateManagementService`.
 
-**Security / Session Invalidation — Chain of Responsibility Pattern:** `JwtInterceptor` ([`src/app/core/interceptors/jwt.interceptor.ts`](src/app/core/interceptors/jwt.interceptor.ts)) runs first to attach the Azure Entra ID Bearer token. `ErrorInterceptor` ([`src/app/core/interceptors/error.interceptor.ts`](src/app/core/interceptors/error.interceptor.ts)) handles responses: `401` → session invalidation + redirect to login; `403` → access-denied event via `NotificationService`; `5xx` → log + user alert. Each interceptor passes unhandled cases down the chain.
+**Security / Session Invalidation — Chain of Responsibility Pattern:** `JwtInterceptor` ([`src/app/core/interceptors/jwt.interceptor.ts`](frontend/src/app/core/interceptors/jwt.interceptor.ts)) runs first to attach the Azure Entra ID Bearer token. `ErrorInterceptor` ([`src/app/core/interceptors/error.interceptor.ts`](frontend/src/app/core/interceptors/error.interceptor.ts)) handles responses: `401` → session invalidation + redirect to login; `403` → access-denied event via `NotificationService`; `5xx` → log + user alert. Each interceptor passes unhandled cases down the chain.
 
-**Security — Guard Pattern (Template Method):** `AuthGuard` ([`src/app/core/auth/auth.guard.ts`](src/app/core/auth/auth.guard.ts)) validates the active session token and redirects to login if expired. `RoleGuard` ([`src/app/core/auth/role.guard.ts`](src/app/core/auth/role.guard.ts)) extends the check to verify the user's role holds the required permission for the target route (e.g., `GENERATE_DUA` for `/generate`). Template: validate precondition → allow or deny → redirect if denied.
+**Security — Guard Pattern (Template Method):** `AuthGuard` ([`src/app/core/auth/auth.guard.ts`](frontend/src/app/core/auth/auth.guard.ts)) validates the active session token and redirects to login if expired. `RoleGuard` ([`src/app/core/auth/role.guard.ts`](frontend/src/app/core/auth/role.guard.ts)) extends the check to verify the user's role holds the required permission for the target route (e.g., `GENERATE_DUA` for `/generate`). Template: validate precondition → allow or deny → redirect if denied.
 
-**Structural — Facade Pattern:** `DuaGenerationFacade` ([`src/app/application/facades/dua-generation.facade.ts`](src/app/application/facades/dua-generation.facade.ts)) exposes `startGeneration()`, which orchestrates file validation, batch submission, progress subscription setup, and state initialisation. `AuthFacade` ([`src/app/application/facades/auth.facade.ts`](src/app/application/facades/auth.facade.ts)) and `BatchMonitoringFacade` ([`src/app/application/facades/batch-monitoring.facade.ts`](src/app/application/facades/batch-monitoring.facade.ts)) follow the same principle. Smart components call one facade method instead of coordinating multiple services.
+**Structural — Facade Pattern:** `DuaGenerationFacade` ([`src/app/application/facades/dua-generation.facade.ts`](frontend/src/app/application/facades/dua-generation.facade.ts)) exposes `startGeneration()`, which orchestrates file validation, batch submission, progress subscription setup, and state initialisation. `AuthFacade` ([`src/app/application/facades/auth.facade.ts`](frontend/src/app/application/facades/auth.facade.ts)) and `BatchMonitoringFacade` ([`src/app/application/facades/batch-monitoring.facade.ts`](frontend/src/app/application/facades/batch-monitoring.facade.ts)) follow the same principle. Smart components call one facade method instead of coordinating multiple services.
 
 ## 1.7 Project scaffold
 
-Scaffold location: [`/src`](/src)
+Scaffold location: [`/frontend/src`](frontend/src)
 
 ```
-src/
+frontend/src/
 ├── main.ts
 ├── index.html
 ├── styles.css
@@ -513,7 +513,7 @@ src/
                 └── progress-bar.component.ts
 ```
 
-Root config files: `angular.json`, `tailwind.config.js`, `tsconfig.json`, `package.json`
+Frontend config files: [`angular.json`](frontend/angular.json), [`tailwind.config.js`](frontend/tailwind.config.js), [`tsconfig.json`](frontend/tsconfig.json), [`package.json`](frontend/package.json)
 
 # 2. Backend Design
 
@@ -532,7 +532,7 @@ Root config files: `angular.json`, `tailwind.config.js`, `tsconfig.json`, `packa
 | File Storage | Azure Blob Storage (per-job containers) |
 | Background Jobs | Azure Service Bus + .NET Worker Service (hosted in App Service) |
 | Load Balancing | Not required — single App Service instance |
-| Repo Layout | Monorepo — backend code lives under `/duabusiness` |
+| Repo Layout | Monorepo — frontend code in [`/frontend`](frontend/), backend code in [`/duabusiness`](duabusiness/) |
 | Service Granularity | Services (not microservices) — single deployable ASP.NET Core app with internal service classes |
 
 **Internal service modules (within the monolith):**
@@ -731,36 +731,371 @@ The following architectural elements scale horizontally or vertically in respons
 - Above **2,000 RPM**: re-evaluate service decomposition (split document processing into a dedicated service) and introduce Azure Front Door for global load distribution.
 
 ## 2.7 Backend key workflows:
-- esto lo pueden ir trabajando 
 
-### Upload files to generate dua
-1. The backend receive the list of files to be uploaded 
-2. Open a streaming transfer file by file to received the files content in raw format
-3. All the files are store in azure cloud storage and map in the database ....
+### Upload files to generate DUA
+1. The frontend sends a `POST /jobs` request with metadata (job name, user ID, selected template ID). The API validates the JWT token and creates a new `Job` entity in Azure SQL with status `Created`. A unique `jobId` is returned.
+2. The frontend uploads each file individually via `POST /jobs/{jobId}/files` using multipart/form-data streaming. The API validates file type (`.xlsx`, `.docx`, `.pdf`, `.jpg`, `.png`) and enforces the 20 MB per-file size limit.
+3. Each uploaded file is stored in Azure Blob Storage under a per-job container (`jobs/{jobId}/{originalFileName}`). A `SourceFile` record is created in Azure SQL mapping the blob URI, file type, original name, and upload timestamp.
+4. Once all files are uploaded, the frontend sends `POST /jobs/{jobId}/start`. The API changes the job status to `Queued` and publishes a `JobReadyForProcessing` message to Azure Service Bus.
+5. The Worker Service picks up the message from the queue and changes the job status to `Processing`. It iterates through each `SourceFile` in the job.
+6. For each file, the worker downloads the blob content and sends it to **Azure AI Document Intelligence** (Form Recognizer) for OCR and structured text extraction. Results are stored as `ExtractedContent` in Azure SQL.
+7. The extracted text from all files is aggregated and sent to **Azure OpenAI Service (GPT-4o)** with a customs-specific system prompt for semantic extraction. The AI identifies DUA-relevant fields (importer, exporter, tariff codes, quantities, values, currencies, dates).
+8. The mapped fields are validated for basic coherence: totals must sum correctly, currencies must be consistent across line items, and dates must follow chronological order. Each field receives a confidence score (`High ≥ 0.8`, `Medium 0.6–0.79`, `Low < 0.6`).
+9. Fields with confidence below `0.6` are flagged with `LowConfidence` observations. The job status changes to `MappingCompleted`.
+10. The system generates the pre-filled DUA `.docx` document using the selected template, embedding field values and confidence indicators. The generated document is stored in Azure Blob Storage at `jobs/{jobId}/output/dua-result.docx`.
+11. The job status changes to `Completed` (or `CompletedWithObservations` if low-confidence fields exist). A `JobCompleted` event is published to Service Bus for notification delivery.
+12. The frontend polls `GET /jobs/{jobId}/status` and receives the final status with a download URL for the generated DUA document.
 
-... poniendo los pasos de los flujos
+### Setup DUA template
+1. An authenticated user with the `EDIT_TEMPLATES` permission sends a `POST /templates` request with the DUA template file (`.docx`) and metadata (template name, version, description).
+2. The API validates the template file structure: it must contain the expected DUA field placeholders (e.g., `{{importerName}}`, `{{tariffCode}}`, `{{totalValue}}`) matching the `DuaFieldMapping` schema.
+3. The template file is stored in Azure Blob Storage under `templates/{templateId}/{version}/template.docx`. A `DuaTemplate` record is created in Azure SQL with the blob URI, field mapping definitions, version number, and creation timestamp.
+4. The API returns the `templateId` and confirms the template is available for use in future DUA generation jobs.
+5. When a user selects a template during job configuration (`GET /templates`), the API returns all active templates with their metadata. The selected `templateId` is associated with the job at creation time.
 
-### Setup dua template
-1.
-2. 
-3. 
+### Export DUA document
+1. The frontend sends `GET /jobs/{jobId}/result` to retrieve the pre-filled DUA with all field values and confidence levels as structured JSON.
+2. The user reviews and corrects flagged fields via `PATCH /jobs/{jobId}/fields` with an array of field corrections (`fieldId`, `correctedValue`, `reviewerNote`).
+3. The API applies corrections, recalculates coherence validations (totals, currency, dates), and updates the DUA document in Blob Storage.
+4. The frontend requests the final export via `POST /jobs/{jobId}/export`. The API performs a final coherence validation pass, generates the definitive `.docx`, and stores it in Blob Storage.
+5. An audit log entry is written with the export timestamp, user ID, job ID, number of corrections applied, and final validation result.
+6. The API returns a signed download URL (SAS token, 1-hour expiry) for the exported `.docx` file.
 
 ## 2.8 Architecture diagrams in layers:
-- Follow the C4 estandard to create the diagrams and explanations
-- Check Week #6 #7 for the details 
-- In this case we're not going to make the components diagram, only context, container and code. 
+
+### Level 1 — System Context Diagram
+
+Shows DUA Streamliner as a single system and its relationships with users and external systems.
+
+```
+                                    +---------------------+
+                                    |   Azure Entra ID    |
+                                    |  (Identity Provider)|
+                                    +----------+----------+
+                                               |
+                                       authenticates via
+                                        OAuth 2.0 / OIDC
+                                               |
+    +----------------+              +----------+----------+              +------------------------+
+    |                |   uses via   |                     |  calls API   |                        |
+    | Customs Agent  +------------->+   DUA Streamliner   +------------->+  Azure OpenAI Service  |
+    | / Manager      |   browser    |      [System]       |              |      (GPT-4o)          |
+    |  [Person]      |              |                     |              +------------------------+
+    +----------------+              +----------+----------+
+                                               |
+                                    +----------+----------+
+                                    |                     |
+                              +-----+-----+         +----+----+
+                              |  Azure AI  |         |  Azure  |
+                              | Document   |         |  Blob   |
+                              | Intelligence|        | Storage |
+                              +------------+         +---------+
+```
+
+**Description:**
+- **Customs Agent / Manager** — End users who interact with DUA Streamliner through a web browser. Customs Agents upload documents and generate DUAs. Managers administer users, reports, and templates.
+- **DUA Streamliner** — The system under design. Receives source documents, processes them through OCR and AI extraction, maps data to the official DUA format, and produces a pre-filled Word document with confidence indicators.
+- **Azure Entra ID** — External identity provider. Handles authentication with MFA and issues JWT tokens. DUA Streamliner delegates all authentication to this service.
+- **Azure OpenAI Service (GPT-4o)** — External AI service used for semantic extraction. Receives extracted text and returns structured DUA field mappings with confidence scores.
+- **Azure AI Document Intelligence** — External OCR service. Receives uploaded documents (PDF, images, scanned files) and returns structured text extraction results.
+- **Azure Blob Storage** — External file storage. Stores uploaded source files, DUA templates, and generated output documents.
+
+---
+
+### Level 2 — Container Diagram
+
+Zooms into DUA Streamliner and shows its internal containers (deployable units) and how they interact.
+
+```
++--------------------------------------------------+
+|              DUA Streamliner [System]             |
+|                                                   |
+|  +---------------------------------------------+ |
+|  |         Angular 21 SPA [Container]           | |
+|  |  Single Page Application                     | |
+|  |  Delivers UI, handles auth flow,             | |
+|  |  calls backend REST API                      | |
+|  |  Tech: Angular 21, TypeScript, Tailwind CSS  | |
+|  +----------------------+-----------------------+ |
+|                         | HTTPS / REST            |
+|                         v                         |
+|  +---------------------------------------------+ |
+|  |    Azure API Management (APIM) [Container]   | |
+|  |  API Gateway                                 | |
+|  |  Rate limiting, JWT validation,              | |
+|  |  TLS termination, request routing            | |
+|  +----------------------+-----------------------+ |
+|                         | HTTPS / REST            |
+|                         v                         |
+|  +---------------------------------------------+ |
+|  |      DUA.Api [Container]                     | |
+|  |  ASP.NET Core 8 Web API                      | |
+|  |  REST controllers, middleware,               | |
+|  |  request validation, Swagger                 | |
+|  |  Tech: .NET 8, ASP.NET Core                  | |
+|  +-----+-------------------+-------------------+ |
+|        |                   |                      |
+|        v                   v                      |
+|  +-----------+   +--------------------+           |
+|  | DUA.App   |   | DUA.Infrastructure |           |
+|  | [Container]|  | [Container]        |           |
+|  | Use cases, |  | Azure SDK adapters,|           |
+|  | service    |  | EF Core repos,     |           |
+|  | interfaces |  | Blob client,       |           |
+|  +-----+------+ | OpenAI client      |           |
+|        |         +--------+-----------+           |
+|        v                  |                       |
+|  +-----------+            |                       |
+|  |DUA.Domain |            |                       |
+|  |[Container]|            |                       |
+|  | Entities, |            |                       |
+|  | value obj |            |                       |
+|  +-----------+            |                       |
+|                           v                       |
+|  +---------------------------------------------+ |
+|  |      DUA.Workers [Container]                 | |
+|  |  .NET Worker Service                         | |
+|  |  Consumes Service Bus messages,              | |
+|  |  orchestrates OCR + AI pipeline,             | |
+|  |  generates DUA documents                     | |
+|  |  Tech: .NET 8, BackgroundService             | |
+|  +---------------------------------------------+ |
++--------------------------------------------------+
+
+External:
+  +----------------+   +-------------------+   +-------------+
+  | Azure SQL DB   |   | Azure Blob Storage|   | Azure       |
+  | [Database]     |   | [File Store]      |   | Service Bus |
+  | Jobs, fields,  |   | Source files,     |   | [Message    |
+  | templates,     |   | templates,        |   |  Broker]    |
+  | audit logs     |   | generated DUAs    |   | Job queue   |
+  +----------------+   +-------------------+   +-------------+
+```
+
+**Interactions:**
+- The **Angular SPA** communicates exclusively with **APIM**, which routes requests to the **DUA.Api** container.
+- **DUA.Api** uses **DUA.Application** for business logic orchestration and **DUA.Infrastructure** for data persistence (Azure SQL via EF Core) and external service calls (Blob Storage, OpenAI, Document Intelligence).
+- **DUA.Domain** contains pure domain entities and value objects with no external dependencies.
+- When a job is started, **DUA.Api** publishes a message to **Azure Service Bus**. The **DUA.Workers** container consumes the message and runs the OCR → AI extraction → mapping → DUA generation pipeline.
+- **Azure SQL Database** stores all relational data. **Azure Blob Storage** stores all file content. **Azure Service Bus** decouples the API from long-running processing.
+
+---
+
+### Level 3 — Code Diagram (DUA.Api + DUA.Application)
+
+Shows the key classes and their relationships within the API and Application layers.
+
+```
+DUA.Api/Controllers/
++-------------------------+     +---------------------------+
+| JobsController          |     | TemplatesController       |
+| - POST /jobs            |     | - POST /templates         |
+| - POST /jobs/{id}/files |     | - GET /templates          |
+| - POST /jobs/{id}/start |     | - GET /templates/{id}     |
+| - GET /jobs/{id}/status |     +-------------+-------------+
+| - GET /jobs/{id}/result |                   |
+| - PATCH /jobs/{id}/fields|                  | uses
+| - POST /jobs/{id}/export|                   |
++------------+------------+     +-------------v-------------+
+             |                  | TemplateService           |
+             | uses             | + CreateTemplate()        |
+             v                  | + GetAllTemplates()       |
++-------------------------+     | + ValidateTemplate()      |
+| JobService              |     +---------------------------+
+| + CreateJob()           |
+| + UploadFile()          |         DUA.Infrastructure/
+| + StartProcessing()     |     +---------------------------+
+| + GetStatus()           |     | IJobRepository            |
+| + GetResult()           |     | IBlobStorageService       |
+| + ApplyCorrections()    |     | IOcrService               |
+| + ExportDua()           |     | ISemanticExtractionService|
++------------+------------+     | IAuditLogRepository       |
+             |                  +---------------------------+
+             | uses                        ^
+             v                             | implements
++-------------------------+     +---------------------------+
+| DuaProcessingPipeline   |     | BlobStorageService        |
+| + RunOcr()              |     | OcrService                |
+| + RunExtraction()       |     | (→ Azure AI Doc Intel)    |
+| + MapFields()           |     | SemanticExtractionService |
+| + ValidateCoherence()   |     | (→ Azure OpenAI GPT-4o)  |
+| + GenerateDocument()    |     | JobRepository (EF Core)   |
++-------------------------+     | AuditLogRepository        |
+             |                  +---------------------------+
+             | uses
+             v
++-------------------------+       DUA.Domain/
+| DuaDocumentGenerator    |     +---------------------------+
+| + BuildFromTemplate()   |     | Job (Entity)              |
+| + ApplyFieldValues()    |     | SourceFile (Entity)       |
+| + EmbedConfidence()     |     | DuaField (Value Object)   |
+| + ProduceDocx()         |     | DuaTemplate (Entity)      |
++-------------------------+     | ConfidenceLevel (Enum)    |
+                                | JobStatus (Enum)          |
+                                | ProcessingStage (Enum)    |
+                                +---------------------------+
+```
+
+**Description:**
+- **JobsController** and **TemplatesController** are the REST entry points. They validate requests, delegate to application services, and return HTTP responses.
+- **JobService** orchestrates the full job lifecycle: creation, file upload, processing trigger, status retrieval, corrections, and export.
+- **TemplateService** manages DUA template CRUD and validation of field placeholders.
+- **DuaProcessingPipeline** is invoked by the Worker Service. It coordinates the sequential steps: OCR → semantic extraction → field mapping → coherence validation → document generation.
+- **DuaDocumentGenerator** handles the final `.docx` creation using the selected template and mapped field values.
+- **Infrastructure services** implement interfaces defined in `DUA.Application` (Dependency Inversion). Each external Azure service has a dedicated adapter class.
+- **Domain entities** are persistence-ignorant. `Job` is the aggregate root that owns `SourceFile` and `DuaField` collections.
 
 ## 2.9 Design Considerations:
 
-* System configurations, parameters, and policies must be fully documented and maintained within the source code.
-* Resource allocations, including memory, server specifications, load balancing settings, and networking parameters.
-* Selection of specific algorithms and their respective parameters to be applied within core business logic.
-* Development and definition of agent prototypes.
-* Definition of interfaces, proxies, and integration points with external systems or architectural components.
+### System Configurations and Policies
+
+| Configuration | Value | Location |
+|---|---|---|
+| JWT token lifetime | 60 minutes (access) / 7 days (refresh) | Azure Entra ID + `appsettings.json` |
+| Max file upload size | 20 MB per file, 50 MB per job | `Program.cs` (Kestrel limits) + APIM policy |
+| Supported file types | `.xlsx`, `.docx`, `.pdf`, `.jpg`, `.png` | `FileValidationPolicy.cs` |
+| Confidence threshold (low) | < 0.6 | `ConfidenceSettings.cs` |
+| Confidence threshold (medium) | 0.6 – 0.79 | `ConfidenceSettings.cs` |
+| Confidence threshold (high) | ≥ 0.8 | `ConfidenceSettings.cs` |
+| Rate limit (authenticated) | 60 req/min per user | APIM policy + `RateLimiterOptions` |
+| Rate limit (file upload) | 10 req/min per user | APIM policy |
+| Data retention (hot) | 90 days | Worker Service scheduled job |
+| Data retention (archive) | 12 months | Worker Service scheduled job |
+| Data retention (deletion) | After 15 months | Worker Service scheduled job |
+| SAS token expiry (export URLs) | 1 hour | `BlobStorageService.cs` |
+| Service Bus max retries | 3 attempts before dead-letter | `ServiceBusOptions` in `appsettings.json` |
+
+All configuration values are stored in `appsettings.json` with environment overrides in Azure App Service Configuration. Secrets (connection strings, API keys, Azure OpenAI endpoint keys) are stored exclusively in **Azure Key Vault** and accessed via Managed Identity at runtime.
+
+### Resource Allocations
+
+| Resource | Specification |
+|---|---|
+| App Service Plan (API) | B3 — 4 vCPU, 7 GB RAM, 10 GB storage |
+| App Service Plan (Workers) | B3 — separate plan for independent scaling |
+| Azure SQL Database | Standard S2 — 50 DTUs, 250 GB max |
+| Azure Blob Storage | Standard — ZRS replication, Hot tier (output) + Cool tier (archive) |
+| Azure Service Bus | Standard tier — 16 partitioned queues |
+| Azure OpenAI (GPT-4o) | 80K TPM (tokens per minute) quota |
+| Azure AI Document Intelligence | 15 TPS (transactions per second) |
+| Azure API Management | Developer tier (dev/stage), Standard tier (prod) |
+
+### Algorithms and Parameters
+
+| Algorithm | Purpose | Parameters |
+|---|---|---|
+| **Token Bucket** (rate limiting) | Controls API request throughput | Bucket size: 60 tokens, refill rate: 1 token/sec |
+| **Confidence scoring** | Evaluates extraction certainty per field | Weighted average of: OCR confidence (30%), AI extraction confidence (50%), field format validation (20%) |
+| **Coherence validation** | Cross-field consistency checks | Rules: line item totals = declared total (±0.01 tolerance), single currency per declaration, dates in chronological order |
+| **Exponential backoff** (Service Bus retry) | Retry transient failures in worker pipeline | Initial delay: 1s, multiplier: 2x, max delay: 30s, max retries: 3 |
+| **SAS token generation** | Secure time-limited file download URLs | Algorithm: HMAC-SHA256, expiry: 1 hour, permissions: read-only |
+
+### Agent Prototypes
+
+| Agent | Responsibility | Input | Output |
+|---|---|---|---|
+| **OCR Agent** | Extracts raw text and structure from uploaded documents | File blob (PDF, image) | Structured text with positional metadata and OCR confidence scores |
+| **Semantic Extraction Agent** | Maps extracted text to DUA fields using customs terminology | Aggregated extracted text + DUA field schema | Array of `DuaField` objects with values and confidence scores |
+| **Coherence Validation Agent** | Validates cross-field consistency and business rules | Array of `DuaField` objects | Validation result with pass/fail per rule and correction suggestions |
+| **Document Generation Agent** | Produces the final `.docx` from template and field values | DUA template + validated fields + confidence metadata | Pre-filled `.docx` file with visual confidence indicators |
+
+Each agent is implemented as a service class within `DUA.Application/Services/` and orchestrated by `DuaProcessingPipeline`.
+
+### Interfaces, Proxies, and Integration Points
+
+| Interface | Implementation | External System | Purpose |
+|---|---|---|---|
+| `IOcrService` | `AzureDocumentIntelligenceService` | Azure AI Document Intelligence | OCR and structured text extraction from documents |
+| `ISemanticExtractionService` | `AzureOpenAiExtractionService` | Azure OpenAI Service (GPT-4o) | AI-driven semantic field extraction with customs context |
+| `IBlobStorageService` | `AzureBlobStorageService` | Azure Blob Storage | Upload, download, and manage source files, templates, and output documents |
+| `IMessageBroker` | `AzureServiceBusPublisher` | Azure Service Bus | Publish job processing messages and consume them in workers |
+| `IIdentityService` | `AzureEntraIdService` | Azure Entra ID | Token validation, user identity resolution, role extraction |
+| `IAuditLogSink` | `ApplicationInsightsSink` | Azure Application Insights | Structured audit log and telemetry submission |
+| `IKeyVaultClient` | `AzureKeyVaultClient` | Azure Key Vault | Runtime retrieval of secrets and configuration values |
+
+All external integrations follow the **Adapter pattern**: interfaces are defined in `DUA.Application/Interfaces/`, implementations live in `DUA.Infrastructure/Services/`. This ensures the domain and application layers have zero dependency on Azure SDKs.
 
 ## Source Code
 
-* Use a specialized agent to generate the project's backend skeleton based on this technical description.
-* Ensure the agent focuses strictly on generating scripts, folder structures, or class definitions without implementing functional logic.
-* The directory structure of the backend code must align with the chosen repository architecture.
-* Provide direct links to key folders and primary classes within the relevant sections of this README.md file.
+Backend scaffold location: [`/duabusiness`](duabusiness/)
+
+```
+duabusiness/
+├── DUA.Api/
+│   ├── Program.cs
+│   ├── Controllers/
+│   │   ├── JobsController.cs
+│   │   └── TemplatesController.cs
+│   ├── Middleware/
+│   │   └── ExceptionHandlingMiddleware.cs
+│   └── Configuration/
+│       ├── RateLimiterOptions.cs
+│       ├── ConfidenceSettings.cs
+│       └── FileValidationPolicy.cs
+├── DUA.Application/
+│   ├── Interfaces/
+│   │   ├── IOcrService.cs
+│   │   ├── ISemanticExtractionService.cs
+│   │   ├── IBlobStorageService.cs
+│   │   ├── IMessageBroker.cs
+│   │   ├── IIdentityService.cs
+│   │   ├── IAuditLogSink.cs
+│   │   ├── IKeyVaultClient.cs
+│   │   ├── IJobRepository.cs
+│   │   ├── ITemplateRepository.cs
+│   │   └── IAuditLogRepository.cs
+│   └── Services/
+│       ├── JobService.cs
+│       ├── TemplateService.cs
+│       ├── DuaProcessingPipeline.cs
+│       └── DuaDocumentGenerator.cs
+├── DUA.Domain/
+│   ├── Entities/
+│   │   ├── Job.cs
+│   │   ├── SourceFile.cs
+│   │   └── DuaTemplate.cs
+│   ├── ValueObjects/
+│   │   └── DuaField.cs
+│   ├── Enums/
+│   │   ├── JobStatus.cs
+│   │   ├── ConfidenceLevel.cs
+│   │   ├── ProcessingStage.cs
+│   │   └── FileType.cs
+│   └── Events/
+│       ├── JobCompletedEvent.cs
+│       └── LowConfidenceDetectedEvent.cs
+├── DUA.Infrastructure/
+│   ├── Services/
+│   │   ├── AzureDocumentIntelligenceService.cs
+│   │   ├── AzureOpenAiExtractionService.cs
+│   │   ├── AzureBlobStorageService.cs
+│   │   ├── AzureServiceBusPublisher.cs
+│   │   ├── AzureEntraIdService.cs
+│   │   ├── ApplicationInsightsSink.cs
+│   │   └── AzureKeyVaultClient.cs
+│   └── Persistence/
+│       ├── AppDbContext.cs
+│       ├── JobRepository.cs
+│       ├── TemplateRepository.cs
+│       └── AuditLogRepository.cs
+└── DUA.Workers/
+    ├── Program.cs
+    └── JobProcessingWorker.cs
+```
+
+### Key classes and their locations
+
+| Class / Interface | Path | Responsibility |
+|---|---|---|
+| `JobsController` | [`duabusiness/DUA.Api/Controllers/JobsController.cs`](duabusiness/DUA.Api/Controllers/JobsController.cs) | REST endpoints for job lifecycle (create, upload, start, status, result, corrections, export) |
+| `TemplatesController` | [`duabusiness/DUA.Api/Controllers/TemplatesController.cs`](duabusiness/DUA.Api/Controllers/TemplatesController.cs) | REST endpoints for DUA template management |
+| `JobService` | [`duabusiness/DUA.Application/Services/JobService.cs`](duabusiness/DUA.Application/Services/JobService.cs) | Orchestrates the full job lifecycle use cases |
+| `DuaProcessingPipeline` | [`duabusiness/DUA.Application/Services/DuaProcessingPipeline.cs`](duabusiness/DUA.Application/Services/DuaProcessingPipeline.cs) | Coordinates OCR → extraction → mapping → validation → generation pipeline |
+| `DuaDocumentGenerator` | [`duabusiness/DUA.Application/Services/DuaDocumentGenerator.cs`](duabusiness/DUA.Application/Services/DuaDocumentGenerator.cs) | Builds the final `.docx` from template and mapped fields |
+| `Job` | [`duabusiness/DUA.Domain/Entities/Job.cs`](duabusiness/DUA.Domain/Entities/Job.cs) | Aggregate root — represents a DUA generation job |
+| `DuaField` | [`duabusiness/DUA.Domain/ValueObjects/DuaField.cs`](duabusiness/DUA.Domain/ValueObjects/DuaField.cs) | Value object for a single DUA field with confidence metadata |
+| `IOcrService` | [`duabusiness/DUA.Application/Interfaces/IOcrService.cs`](duabusiness/DUA.Application/Interfaces/IOcrService.cs) | Interface for OCR document processing |
+| `ISemanticExtractionService` | [`duabusiness/DUA.Application/Interfaces/ISemanticExtractionService.cs`](duabusiness/DUA.Application/Interfaces/ISemanticExtractionService.cs) | Interface for AI-driven field extraction |
+| `AzureBlobStorageService` | [`duabusiness/DUA.Infrastructure/Services/AzureBlobStorageService.cs`](duabusiness/DUA.Infrastructure/Services/AzureBlobStorageService.cs) | Azure Blob Storage adapter for file operations |
+| `AppDbContext` | [`duabusiness/DUA.Infrastructure/Persistence/AppDbContext.cs`](duabusiness/DUA.Infrastructure/Persistence/AppDbContext.cs) | EF Core database context |
+| `JobProcessingWorker` | [`duabusiness/DUA.Workers/JobProcessingWorker.cs`](duabusiness/DUA.Workers/JobProcessingWorker.cs) | Background service consuming Service Bus messages for job processing |
